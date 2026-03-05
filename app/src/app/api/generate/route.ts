@@ -7,6 +7,7 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:32b";
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const SYSTEM_PROMPT =
   "You are Tango, a campaign architect that always responds with JSON matching the provided schema.";
+const RUNNING_ON_VERCEL = Boolean(process.env.VERCEL);
 
 function getOpenRouterConfig() {
   return {
@@ -100,9 +101,17 @@ export async function POST(req: Request) {
 
     const prompt = buildPrompt({ ...data, channels });
     const { key, model } = getOpenRouterConfig();
-    const useOpenRouter = Boolean(key && model);
-    const result = useOpenRouter ? await callOpenRouter(prompt, key!, model!) : await callOllama(prompt);
+    const preferOpenRouter = RUNNING_ON_VERCEL || Boolean(key && model);
 
+    if (preferOpenRouter) {
+      if (!key || !model) {
+        throw new Error("OpenRouter credentials are missing in this environment");
+      }
+      const result = await callOpenRouter(prompt, key, model);
+      return NextResponse.json({ result });
+    }
+
+    const result = await callOllama(prompt);
     return NextResponse.json({ result });
   } catch (error) {
     console.error("/api/generate error", error);
