@@ -68,8 +68,7 @@ const payload = {
   tone: "Bold Operator",
   callToAction: "Start a 14-day $0 pilot",
   differentiator: "Realtime payouts with guardrails",
-  reviews:
-    Earn-E changed Saturdays in our house... / QR chore boards finally work / Grandparents can fund rewards in seconds,
+  reviews: `"Earn-E changed Saturdays in our house..." / "QR chore boards finally work" / "Grandparents can fund rewards in seconds"`,
   channels: ["social", "email", "sms", "landing"]
 };
 
