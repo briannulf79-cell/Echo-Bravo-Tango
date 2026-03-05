@@ -4,11 +4,16 @@ import { GeneratePayload, TangoResponse } from "@/types/campaign";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://127.0.0.1:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:32b";
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL;
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const SYSTEM_PROMPT =
   "You are Tango, a campaign architect that always responds with JSON matching the provided schema.";
+
+function getOpenRouterConfig() {
+  return {
+    key: process.env.OPENROUTER_API_KEY,
+    model: process.env.OPENROUTER_MODEL
+  };
+}
 
 async function callOllama(prompt: string) {
   const response = await fetch(`${OLLAMA_HOST}/api/generate`, {
@@ -44,21 +49,17 @@ async function callOllama(prompt: string) {
   return JSON.parse(jsonSlice) as TangoResponse;
 }
 
-async function callOpenRouter(prompt: string) {
-  if (!OPENROUTER_API_KEY || !OPENROUTER_MODEL) {
-    throw new Error("OpenRouter API key/model not configured");
-  }
-
+async function callOpenRouter(prompt: string, apiKey: string, model: string) {
   const response = await fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "HTTP-Referer": "https://echo-bravo-tango.vercel.app",
       "X-Title": "Echo-Bravo-Tango"
     },
     body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -98,8 +99,9 @@ export async function POST(req: Request) {
     }
 
     const prompt = buildPrompt({ ...data, channels });
-    const useOpenRouter = Boolean(OPENROUTER_API_KEY && OPENROUTER_MODEL);
-    const result = useOpenRouter ? await callOpenRouter(prompt) : await callOllama(prompt);
+    const { key, model } = getOpenRouterConfig();
+    const useOpenRouter = Boolean(key && model);
+    const result = useOpenRouter ? await callOpenRouter(prompt, key!, model!) : await callOllama(prompt);
 
     return NextResponse.json({ result });
   } catch (error) {
